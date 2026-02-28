@@ -12,3 +12,9 @@ site_build: site_link
 
 site_deploy: site_link
 	mkdocs gh-deploy --clean
+
+sort:
+	python sort.py
+
+sort_check:
+	python sort.py --check

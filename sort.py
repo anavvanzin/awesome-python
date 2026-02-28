@@ -14,14 +14,27 @@
     and flattening the end structure into a list of lines. Revision 2 maybe ^.^.
 """
 
+import sys
+
+
 def sort_blocks():
     # First, we load the current README into memory
     with open('README.md', 'r') as read_me_file:
         read_me = read_me_file.read()
 
     # Separating the 'table of contents' from the contents (blocks)
-    table_of_contents = ''.join(read_me.split('- - -')[0])
-    blocks = ''.join(read_me.split('- - -')[1]).split('\n# ')
+    # Support both '- - -' and '---' as separators
+    if '- - -' in read_me:
+        separator = '- - -'
+    elif '\n---\n' in read_me:
+        separator = '\n---\n'
+    else:
+        print("Warning: No section separator found in README.md, skipping section sorting.")
+        return
+
+    parts = read_me.split(separator, 1)
+    table_of_contents = parts[0]
+    blocks = parts[1].split('\n# ')
     for i in range(len(blocks)):
         if i == 0:
             blocks[i] = blocks[i] + '\n'
@@ -37,12 +50,14 @@ def sort_blocks():
 
     # Replacing the non-sorted libraries by the sorted ones and gathering all at the final_README file
     blocks[0] = inner_blocks
-    final_README = table_of_contents + '- - -' + ''.join(blocks)
+    final_README = table_of_contents + separator + ''.join(blocks)
 
     with open('README.md', 'w+') as sorted_file:
         sorted_file.write(final_README)
 
-def main():
+
+def sort_entries():
+    """Sort entries within each category alphabetically."""
     # First, we load the current README into memory as an array of lines
     with open('README.md', 'r') as read_me_file:
         read_me = read_me_file.readlines()
@@ -67,17 +82,39 @@ def main():
             blocks.append([line])
             last_indent = None
 
+    # Sort all blocks individually
+    sorted_blocks = [
+        ''.join(sorted(block, key=str.lower)) for block in blocks
+    ]
+    return ''.join(sorted_blocks)
+
+
+def check_entries():
+    """Check if entries are sorted alphabetically. Returns True if sorted, False otherwise."""
+    with open('README.md', 'r') as f:
+        original = f.read()
+
+    sorted_content = sort_entries()
+    return original == sorted_content
+
+
+def main():
+    sorted_content = sort_entries()
+
     with open('README.md', 'w+') as sorted_file:
-        # Then all of the blocks are sorted individually
-        blocks = [
-            ''.join(sorted(block, key=str.lower)) for block in blocks
-        ]
-        # And the result is written back to README.md
-        sorted_file.write(''.join(blocks))
+        sorted_file.write(sorted_content)
 
     # Then we call the sorting method
     sort_blocks()
 
 
 if __name__ == "__main__":
-    main()
+    if '--check' in sys.argv:
+        if check_entries():
+            print("README.md entries are properly sorted.")
+            sys.exit(0)
+        else:
+            print("ERROR: README.md entries are not sorted alphabetically. Run 'python sort.py' to fix.")
+            sys.exit(1)
+    else:
+        main()
